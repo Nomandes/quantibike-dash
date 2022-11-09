@@ -5,6 +5,8 @@ import os
 external_stylesheets = ['https://bootswatch.com/5/flatly/bootstrap.min.css']
 app = Dash(__name__,use_pages=True,external_stylesheets=external_stylesheets)
 
+server = app.server
+
 app.layout = html.Div([
     html.H1('Quantibike - Analysis Dashboards'),
 
