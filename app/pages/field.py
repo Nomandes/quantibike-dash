@@ -1,31 +1,31 @@
+#import dash
+#from dash import html, dcc
+#dash.register_page(__name__)
+#layout = html.Div(children=[
+#    html.H1(children='FIELD'),
+#
+#    html.Div(children='''
+#        This is our Archive page content.
+#    '''),
+#
+#])
+import dash
+from dash import Input, Output, html, dcc
+
 import json
 import math
 import pandas as pd
 import numpy as np
 import pysrt
 
-#Plotly
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 
-#Dash
-from dash import Dash
-from dash.dependencies import Input, Output
-import dash.dependencies
-from dash import dcc
-from dash import html
-
-#-------------------#
-#------Options------#
-#-------------------#
 dash.register_page(__name__)
+
 pd.options.plotting.backend = "plotly"
-
 pio.templates.default = "simple_white"#"seaborn"#plotly_dark
-
-#external_stylesheets = ['https://bootswatch.com/5/flatly/bootstrap.min.css'] #https://bootswatch.com/5/morph/bootstrap.min.css
-#app = Dash(__name__,external_stylesheets=external_stylesheets)
 
 COLOR_SIT_A_HEX = "#7a5b7b"
 COLOR_SIT_B_HEX = "#f9dbbd"
@@ -34,10 +34,57 @@ COLOR_SIT_D_HEX = "#68534d"
 COLOR_SIT_E_HEX = "#5b7b7a"
 COLOR_SIT_X_HEX = "#8f2d41"
 
-#-------------------#
-#---Read Functions--#
-#-------------------#
+########
+#FUNCTIONS
+########
 
+def load_csv(path):
+    df = pd.read_csv(path,sep=';');
+    return df
+def add_conditions(subject,fig,propertyName):
+    subs = srts[subject]
+    shapes = []
+    for sub in subs:
+        # If Log was writte before video, add the delay to the times to get correct times
+        if srt_delays[subject] < 0:
+            start = sub.start.minutes * 60 + sub.start.seconds + abs(srt_delays[subject])
+            end = sub.end.minutes * 60 + sub.end.seconds + abs(srt_delays[subject])
+        else:
+            start = sub.start.minutes * 60 + sub.start.seconds - abs(srt_delays[subject])
+            end = sub.end.minutes * 60 + sub.end.seconds - abs(srt_delays[subject])
+        #display("Condition lasted from {} to {}".format(start,end))#
+        color = "#FFFFFF"
+        if "Condition Start" in sub.text:
+            color = COLOR_SIT_X_HEX
+        elif "Condition X" in sub.text:
+            color = COLOR_SIT_X_HEX
+        elif "Condition A" in sub.text:
+            color = COLOR_SIT_A_HEX
+        elif "Condition B" in sub.text:
+            color = COLOR_SIT_B_HEX
+        elif "Condition C" in sub.text:
+            color = COLOR_SIT_C_HEX
+        elif "Condition D" in sub.text:
+            color = COLOR_SIT_D_HEX
+        elif "Condition E" in sub.text:
+            color = COLOR_SIT_E_HEX
+        else:
+            color = COLOR_SIT_X_HEX
+        shapes.append({
+            'type': 'rect',
+#            xref: 'x',
+#            yref: 'paper',
+            'x0': start,
+            'y0': subjects[subject][propertyName].min(),
+            'x1': end,
+            'y1': subjects[subject][propertyName].max(),
+            'fillcolor': color,
+            'opacity': 0.5,
+            'line': {
+                'width': 0
+            }
+        })
+    fig.update_layout(shapes = shapes)
 def include_euler_angles(df):
     # Rotation Matrix Phone and Airpods
     mRotPhone = []
@@ -116,86 +163,25 @@ def read_data(url):
 def read_srt(url):
     subs = pysrt.open(url)
     return subs
-def add_conditions(subject,fig,propertyName):
-    subs = srts[subject]
-    shapes = []
-    for sub in subs:
-        # If Log was writte before video, add the delay to the times to get correct times
-        if srt_delays[subject] < 0:
-            start = sub.start.minutes * 60 + sub.start.seconds + abs(srt_delays[subject])
-            end = sub.end.minutes * 60 + sub.end.seconds + abs(srt_delays[subject])
-        else:
-            start = sub.start.minutes * 60 + sub.start.seconds - abs(srt_delays[subject])
-            end = sub.end.minutes * 60 + sub.end.seconds - abs(srt_delays[subject])
-        #display("Condition lasted from {} to {}".format(start,end))#
-        color = "#FFFFFF"
-        if "Condition Start" in sub.text:
-            color = COLOR_SIT_X_HEX
-        elif "Condition X" in sub.text:
-            color = COLOR_SIT_X_HEX
-        elif "Condition A" in sub.text:
-            color = COLOR_SIT_A_HEX
-        elif "Condition B" in sub.text:
-            color = COLOR_SIT_B_HEX
-        elif "Condition C" in sub.text:
-            color = COLOR_SIT_C_HEX
-        elif "Condition D" in sub.text:
-            color = COLOR_SIT_D_HEX
-        elif "Condition E" in sub.text:
-            color = COLOR_SIT_E_HEX
-        else:
-            color = COLOR_SIT_X_HEX
-        shapes.append({
-            'type': 'rect',
-#            xref: 'x',
-#            yref: 'paper',
-            'x0': start,
-            'y0': subjects[subject][propertyName].min(),
-            'x1': end,
-            'y1': subjects[subject][propertyName].max(),
-            'fillcolor': color,
-            'opacity': 0.5,
-            'line': {
-                'width': 0
-            }
-        })
-    fig.update_layout(shapes = shapes)
-#-------------------#
-#------Data Read----#
-#-------------------#
-#DEBUG
-#df_andrii_2 = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 131551-logfile-subject-Andrii-2.json')
-#df_manu = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 132607-logfile-subject-Manuel.json')
-#df_andrii_3 = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 133510-logfile-subject-Manuel.json')
-#df_andrii_noMag = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 134917-logfile-subject-Andrii-no-magno.json')
-#df_manu_noMag = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 140313-logfile-subject-Manu-nomag2.json')
-#df_andrii_noMag2 = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 141053-logfile-subject-Andrii-nomag2.json')
-#df_andrii_crazy = read_data('/home/nomandes/quantibike/logs/debug/2022-10-03 141328-logfile-subject-Andrii-crazy.json')
-#df_manu_realDeal = read_data('/home/nomandes/quantibike/logs/full_rides/2022-10-08 170857-logfile-subject-RealDeal.json')
-#df_manu_realDeal2 = read_data('/home/nomandes/quantibike/logs/full_rides/2022-10-12 132126-logfile-subject-RealDeal2.json')
-#df_airpods3 = read_data('/home/nomandes/quantibike/logs/debug/2022-10-12 134558-logfile-subject-airPods3.json')
-#df_air3_uni = read_data("/home/nomandes/quantibike/logs/debug/2022-10-18 114524-logfile-subject-Air3_uni.json")
-#df_air3_lw_hin = read_data("/home/nomandes/quantibike/logs/debug/2022-10-18 093416-logfile-subject-Air3_hin.json")
-#df_air3_lw_zurueck = read_data("/home/nomandes/quantibike/logs/debug/2022-10-18 113116-logfile-subject-Air3_zurueck.json")
 
 #SUBJECTS
 df_subject1 = read_data("./logs/field/2022-10-17 124155-logfile-subject-1.json")
-df_subject2 = read_data("./logs/field/2022-10-20 111557-logfile-subject-2.json")
-df_subject3 = read_data("./logs/field/2022-10-25 124003-logfile-subject-3.json")
-df_subject4 = read_data("./logs/field/2022-10-25 142229-logfile-subject-4.json")
-df_subject5 = read_data("./logs/field/2022-10-27 165339-logfile-subject-5.json")
-df_subject6 = read_data("./logs/field/2022-10-28 101829-logfile-subject-6.json")
-df_subject7 = read_data("./logs/field/2022-10-28 154837-logfile-subject-7.json")
+#df_subject2 = read_data("./logs/field/2022-10-20 111557-logfile-subject-2.json")
+#df_subject3 = read_data("./logs/field/2022-10-25 124003-logfile-subject-3.json")
+#df_subject4 = read_data("./logs/field/2022-10-25 142229-logfile-subject-4.json")
+#df_subject5 = read_data("./logs/field/2022-10-27 165339-logfile-subject-5.json")
+#df_subject6 = read_data("./logs/field/2022-10-28 101829-logfile-subject-6.json")
+#df_subject7 = read_data("./logs/field/2022-10-28 154837-logfile-subject-7.json")
 #Calculate Timestamp Diff for motionData
 
 #SRTs
 srt_subject1 = read_srt("./logs/field/srts/subs_participant_1.srt")
-srt_subject2 = read_srt("./logs/field/srts/subs_participant_2.srt")
+#srt_subject2 = read_srt("./logs/field/srts/subs_participant_2.srt")
 #srt_subject3 = read_srt("/home/nomandes/quantibike//logs/participants/srts/subs_participant_3.srt")
-srt_subject4 = read_srt("./logs/field/srts/subs_participant_4.srt")
-srt_subject5 = read_srt("./logs/field/srts/subs_participant_5.srt")
-srt_subject6 = read_srt("./logs/field/srts/subs_participant_6.srt")
-srt_subject7 = read_srt("./logs/field/srts/subs_participant_7.srt")
+#srt_subject4 = read_srt("./logs/field/srts/subs_participant_4.srt")
+#srt_subject5 = read_srt("./logs/field/srts/subs_participant_5.srt")
+#srt_subject6 = read_srt("./logs/field/srts/subs_participant_6.srt")
+#srt_subject7 = read_srt("./logs/field/srts/subs_participant_7.srt")
 
 # TO-DO!! -> Timestamp und steps dynamisch holen
 lastTimestamp = float(df_subject1.iloc[-1].name)
@@ -211,39 +197,39 @@ subjects = {
 #    "DEBUG - Airpods 3 - Uni" : df_air3_uni,
 #    "DEBUG - Airpods 3 - Lichtwiese Hin": df_air3_lw_hin,
 #    "DEBUG - Airpods 3 - Lichtwiese Zurück" : df_air3_lw_zurueck,
-    "Subject 1" : df_subject1,
-    "Subject 2" : df_subject2,
-    "Subject 3 - No Video" : df_subject3,
-    "Subject 4" : df_subject4,
-    "Subject 5" : df_subject5,
-    "Subject 6" : df_subject6,
-    "Subject 7" : df_subject7,
+    "Subject 1" : df_subject1
+    #"Subject 2" : df_subject2,
+    #"Subject 3 - No Video" : df_subject3,
+    #"Subject 4" : df_subject4,
+    #"Subject 5" : df_subject5,
+    #"Subject 6" : df_subject6,
+    #"Subject 7" : df_subject7,
 }
 srts = {
-    "Subject 1" : srt_subject1,
-    "Subject 2" : srt_subject2,
+    "Subject 1" : srt_subject1
+    #"Subject 2" : srt_subject2,
 #    "Subject 3" : srt_subject3,
-    "Subject 4" : srt_subject4,
-    "Subject 5" : srt_subject5,
-    "Subject 6" : srt_subject6,
-    "Subject 7" : srt_subject7
+    #"Subject 4" : srt_subject4,
+    #"Subject 5" : srt_subject5,
+    #"Subject 6" : srt_subject6,
+    #"Subject 7" : srt_subject7
 }
 # If negative, the app was running before the camera. Little inconsistency in the study design
 srt_delays = {
-    "Subject 1" : - 8.0,
-    "Subject 2" : - 29.0,
+    "Subject 1" : - 8.0
+    #"Subject 2" : - 29.0,
 #    "Subject 3" : ,
-    "Subject 4" : -10.0,
-    "Subject 5" : 9.0,
-    "Subject 6" : -32.0,
-    "Subject 7" : 490.0
+   # "Subject 4" : -10.0,
+    #"Subject 5" : 9.0,
+    #"Subject 6" : -32.0,
+    #"Subject 7" : 490.0
 }
 available_data_labels = list(subjects.keys())
 
 #-------------------#
 #-----App Layout----#
 #-------------------#
-app.layout = html.Div([
+layout = html.Div([
     html.Div([dcc.Markdown('''### Please Choose an Subject!''',id='headline_subject')],style={'width': '100%', 'display': 'block'}),
     html.Div([
         html.Label('Subject'),
@@ -288,7 +274,7 @@ app.layout = html.Div([
 #-------------------#
 
 # Timestamps
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('filter-slider-timestamp', 'value'),
     [dash.dependencies.Input('filter_subject', 'value'),
     dash.dependencies.Input('headmovement-scatter', 'hoverData')])
@@ -304,14 +290,14 @@ def update_timestampValue(subject,hoverdata):
         return hoverdata['points'][0]["x"]
     else:
         return 0
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('filter-slider-timestamp', 'min'),
     [dash.dependencies.Input('filter_subject', 'value')])
 def update_timestampMin(subject):
     if not subject in subjects:
         return 0
     return subjects[subject].index.min()
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('filter-slider-timestamp', 'max'),
     [dash.dependencies.Input('filter_subject', 'value')])
 def update_timestampMax(subject):
@@ -320,7 +306,7 @@ def update_timestampMax(subject):
     return subjects[subject].index.max()
 
 #Headmovement
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('headmovement-scatter', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -367,7 +353,7 @@ def update_headrotation(subject, timestamp):
     return fig
 
 #GPS Coordinates
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('gps-coords', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -416,7 +402,7 @@ def update_gps_coords(subject, timestamp):
 
     return fig
 #Yaws
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('yaws-scatter', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -474,7 +460,7 @@ def update_yaws(subject, timestamp):
 
     return fig
 #Rolls
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('rolls-scatter', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -532,7 +518,7 @@ def update_rolls(subject, timestamp):
 
     return fig
 #Pitchs
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('pitchs-scatter', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -590,7 +576,7 @@ def update_pitchs(subject, timestamp):
 
     return fig
 # Altitude
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('altitude', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -638,7 +624,7 @@ def update_altitude(subject, timestamp):
     return fig
 
 #Acceleration
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('acceleration', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -682,7 +668,7 @@ def update_acceleration(subject, timestamp):
     return fig
 
 #Velocity
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('velocity', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
@@ -728,14 +714,14 @@ def update_velocity(subject, timestamp):
     return fig
 
 #Headline
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('headline_subject', 'children'),
     [dash.dependencies.Input('filter_subject', 'value')])
 def update_headline(subject):
     return "### " + subject
 
 #Phone Battery
-@app.callback(
+@dash.callback(
     dash.dependencies.Output('phone_battery', 'figure'),
     [dash.dependencies.Input('filter_subject', 'value'),
      dash.dependencies.Input('filter-slider-timestamp', 'value')])
