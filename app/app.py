@@ -1,26 +1,26 @@
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, html, dcc
+import dash
 import os
 
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__, external_stylesheets=external_stylesheets)
-
-server = app.server
+external_stylesheets = ['https://bootswatch.com/5/flatly/bootstrap.min.css']
+app = Dash(__name__,use_pages=True,external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
-    html.H2('Hello World'),
-    dcc.Dropdown(['LA', 'NYC', 'MTL'],
-        'LA',
-        id='dropdown'
-    ),
-    html.Div(id='display-value')
-])
+    html.H1('Quantibike - Analysis Dashboards'),
 
-@app.callback(Output('display-value', 'children'),
-                [Input('dropdown', 'value')])
-def display_value(value):
-    return f'You have selected {value}'
+    html.Div(
+        [
+            html.Div(
+                dcc.Link(
+                    f"{page['name']} - {page['path']}", href=page["relative_path"]
+                )
+            )
+            for page in dash.page_registry.values()
+        ]
+    ),
+
+    dash.page_container
+])
 
 if __name__ == '__main__':
     app.run_server(debug=True)
